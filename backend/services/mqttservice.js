@@ -17,7 +17,7 @@ function initMQTT(brokerURL, topic, io) {
     });
   });
 
-  client.on("message", async (topic, message) => {
+  client.on("message", async (topic, message) => {   //listen for messages
     await handleIncomingReading(topic, message, io);
   });
 

@@ -18,7 +18,7 @@ async function findUserByMeterId(meterId) {
             return null;
         }
 
-        console.log("✅ User found:", user._id);
+        console.log("✅ User found:", user.name);
         return user;
 
     } catch (err) {

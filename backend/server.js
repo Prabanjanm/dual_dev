@@ -58,6 +58,8 @@ initMQTT(MQTT_BROKER, MQTT_TOPIC, io);
 
 // ---------------------- Cron Job ----------------------
 require("./cron/dailyAggregation");
+app.set("io", io);
+
 
 // ---------------------- Start Server ----------------------
 server.listen(PORT, () => {

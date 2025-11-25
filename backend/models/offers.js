@@ -6,13 +6,14 @@ const offerSchema = new mongoose.Schema({
   creator_id: { type: String, required: true },       // user_id
   creator_meter: { type: String, required: true },
   transformerid: { type: String, required: true },
-  units: { type: Number, required: true },            // kWh
-  price_per_unit: { type: Number, required: true },
-  total_price: { type: Number, required: true },
+  units: { type: Number, required: true },
+  token_per_unit: { type: Number, required: true },
+  total_tokens: { type: Number, required: true },
   status: { type: String, default: "open", enum: ["open", "negotiation", "accepted", "cancelled", "completed"] },
-  negotiated_price: { type: Number, default: null },
+  negotiated_tokens: { type: Number, default: null },
   negotiated_by: { type: String, default: null },
-  created_at: { type: Date, default: Date.now }
+  created_at: { type: Date, default: Date.now },
+  accepted_at: { type: Date, default: null }
 });
 
-module.exports = mongoose.model("Offers", offerSchema, "offers");
+module.exports = mongoose.model("Offer", offerSchema, "offers");

@@ -108,7 +108,10 @@ const authController = {
         transformerid: device.transformerid ,
         grid_id: device.grid_id,
         wallet_balance: 0,
-        energy_balance:0,  
+        energy_balance:0, 
+        token_balance: 0,
+        reserved_energy:0, // locked for sell offers
+        reserved_tokens: 0,  
         total_energy_sold:0,            // P2P sold (kWh)
         total_energy_bought:0 ,          // P2P bought (kWh)
         total_imported_energy:0 ,          // From meter
