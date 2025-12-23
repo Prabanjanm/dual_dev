@@ -5,10 +5,14 @@ import Dashboard from "./pages/dashboard";
 import Profile from "./pages/profile";
 import History from "./pages/history";
 import TradePage from "./pages/trade";
+import AnimatedBackground from "./components/AnimatedBackgroundPure";
+import WelcomeHeader from "./components/WelcomeHeader";
 
 function App() {
   return (
     <BrowserRouter>
+      <AnimatedBackground />
+      <WelcomeHeader />
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />

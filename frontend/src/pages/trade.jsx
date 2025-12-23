@@ -276,8 +276,9 @@ export default function TradePage() {
       try {
         const res = await axios.post(
           `${API}/api/offers/negotiate`,
-          {  user_id: loggedUserId,
-            
+          {
+            user_id: loggedUserId,
+
             offer_id: offer.offer_id || offer._id,
             negotiated_tokens: priceNum,
           },
@@ -300,27 +301,23 @@ export default function TradePage() {
 
     return (
       <div
-        className={`p-5 rounded-xl shadow-xl transition-all duration-300 transform hover:scale-[1.02]
-      ${offer.offer_type === "sell"
-            ? "bg-blue-800/70 border-l-4 border-blue-300"
-            : "bg-red-800/70 border-l-4 border-red-300"
-          }`}
+        className={`energy-card ${offer.offer_type === "sell" ? "energy-card-solar" : "energy-card-blockchain"
+          } transition-all duration-300`}
       >
         {/* Header */}
-        <div className="flex justify-between items-start mb-3 border-b border-white/20 pb-2">
+        <div className="flex justify-between items-start mb-3 pb-2 border-b border-gray-700">
           <h3 className="font-extrabold text-lg flex items-center gap-2">
-            <ArrowRightIcon className="w-5 h-5 text-yellow-400" />
+            <ArrowRightIcon className="w-5 h-5 text-solar" />
             {String(offer.offer_type || "").toUpperCase()} OFFER
           </h3>
 
           <span
-            className={`px-3 py-1 text-xs rounded-full font-bold shadow-md ${
-              offer.status === "open"
-                ? "bg-green-500"
-                : offer.status === "negotiation"
-                  ? "bg-yellow-500"
-                  : "bg-gray-500"
-            }`}
+            className={`status-badge ${offer.status === "open"
+              ? "status-open"
+              : offer.status === "negotiation"
+                ? "status-negotiation"
+                : "status-completed"
+              }`}
           >
             {String(offer.status || "").toUpperCase()}
           </span>
@@ -345,15 +342,15 @@ export default function TradePage() {
             </p>
           )}
 
-          <p className="pt-2 font-bold text-yellow-300">
+          <p className="pt-2 font-bold text-solar">
             Total Value: {offer.total_tokens}
           </p>
 
-          <p className="flex items-center gap-1 text-xs text-white/70 pt-2">
+          <p className="flex items-center gap-1 text-xs text-gray-400 pt-2">
             <UserIcon className="w-4 h-4" /> Creator: {offer.creator_id}
           </p>
 
-          <p className="flex items-center gap-1 text-xs text-white/70">
+          <p className="flex items-center gap-1 text-xs text-gray-400">
             <ClockIcon className="w-4 h-4" /> Created:{" "}
             {created ? created.toLocaleString() : "—"}
           </p>
@@ -454,46 +451,47 @@ export default function TradePage() {
   // RENDER UI
   // -------------------------------
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-600 to-green-800 text-white p-6 pb-24 font-inter">
-      <h1 className="text-3xl font-bold text-center mb-6 flex items-center justify-center gap-2">
-        <BoltIcon className="w-8 h-8 text-yellow-300" />
-        Energy Trading
+    <div className="min-h-screen p-6 pb-24">
+      <h1 className="text-3xl font-bold text-center mb-6 animate-fade-in-up">
+        <span className="text-solar">Energy</span>{" "}
+        <span className="text-energy">Trading</span>
       </h1>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-800/80 rounded-lg text-red-100 font-semibold shadow-inner">
+        <div className="mb-4 p-3 bg-red-500/20 border border-red-500 rounded-lg text-red-200 font-semibold animate-fade-in">
           ⚠ {error}
         </div>
       )}
 
       {/* CREATE OFFER */}
-      <div className="bg-green-700/70 backdrop-blur-sm rounded-xl p-5 mb-8 shadow-2xl border-2 border-green-400/50">
-        <h2 className="font-bold text-xl mb-3 border-b border-green-500 pb-2">
+      <div className="energy-card energy-card-solar mb-8 animate-fade-in-up delay-100">
+        <h2 className="font-bold text-xl mb-3 pb-2 border-b border-gray-700">
           Create New Offer
         </h2>
 
         <form
-          className="grid grid-cols-2 md:grid-cols-5 gap-3 items-end"
+          className="flex flex-col md:flex-row gap-4 items-end"
           onSubmit={handleCreateOffer}
         >
-          <div>
-            <label className="block mb-1 text-sm font-medium">Type</label>
+          <div className="flex-1">
+            <label className="block mb-2 text-sm font-medium text-gray-300">Type</label>
             <select
               value={newOffer.offer_type}
               onChange={(e) =>
                 setNewOffer({ ...newOffer, offer_type: e.target.value })
               }
-              className="text-gray-800 px-3 py-2 w-full rounded-lg bg-white/90 border border-gray-300"
+              className="w-full px-4 py-2.5 rounded-lg bg-[#1e293b] border border-gray-700 text-white focus:border-white focus:outline-none transition-all h-11"
             >
-              <option value="sell">Sell (Energy)</option>
-              <option value="buy">Buy (Energy)</option>
+              <option value="sell" className="bg-[#1e293b] text-white">Sell Energy</option>
+              <option value="buy" className="bg-[#1e293b] text-white">Buy Energy</option>
             </select>
           </div>
 
-          <div>
-            <label className="block mb-1 text-sm font-medium">Units (kWh)</label>
+          <div className="flex-1">
+            <label className="block mb-2 text-sm font-medium text-gray-300">Units (kWh)</label>
             <input
               type="number"
+              placeholder="Enter units"
               value={newOffer.units}
               onChange={(e) =>
                 setNewOffer({
@@ -501,15 +499,16 @@ export default function TradePage() {
                   units: e.target.value.replace(/[^0-9.]/g, ""),
                 })
               }
-              className="text-gray-800 px-3 py-2 w-full rounded-lg bg-white/90 border border-gray-300"
+              className="input-energy h-11"
               min="1"
             />
           </div>
 
-          <div>
-            <label className="block mb-1 text-sm font-medium">Token / Unit</label>
+          <div className="flex-1">
+            <label className="block mb-2 text-sm font-medium text-gray-300">Token / Unit</label>
             <input
               type="number"
+              placeholder="Enter rate"
               value={newOffer.token_per_unit}
               onChange={(e) =>
                 setNewOffer({
@@ -517,23 +516,21 @@ export default function TradePage() {
                   token_per_unit: e.target.value.replace(/[^0-9.]/g, ""),
                 })
               }
-              className="text-gray-800 px-3 py-2 w-full rounded-lg bg-white/90 border border-gray-300"
+              className="input-energy h-11"
               min="1"
             />
           </div>
 
-          <div className="text-center bg-green-800/50 p-2 rounded-lg">
-            <p className="text-xs text-green-200">
-              Total {newOffer.offer_type === "buy" ? "Cost" : "Earning"}
-            </p>
-            <p className="font-bold text-lg text-yellow-300">
-              {totalTokens.toFixed(2)} Tokens
-            </p>
+          <div className="bg-[#1e293b] border border-gray-700 p-3 rounded-lg h-11 flex items-center px-4">
+            <div>
+              <p className="text-xs text-gray-400 leading-none">Total {newOffer.offer_type === "buy" ? "Cost" : "Earning"}</p>
+              <p className="font-bold text-sm text-solar leading-none mt-1">{totalTokens.toFixed(2)} Tokens</p>
+            </div>
           </div>
 
           <button
             type="submit"
-            className="bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold px-4 py-2 rounded-lg shadow-md"
+            className="btn-solar px-8 py-2.5 h-11 whitespace-nowrap"
           >
             Create Offer
           </button>
@@ -541,59 +538,69 @@ export default function TradePage() {
       </div>
 
       {/* YOUR OFFERS */}
-      <h2 className="font-bold text-2xl mb-3 text-yellow-300 text-center">
+      <h2 className="font-bold text-2xl mb-3 text-solar text-center animate-fade-in-up delay-200">
         Your Active Offers
       </h2>
 
       {loading ? (
-        <p className="text-center text-xl p-8 bg-green-700/50 rounded-lg">
+        <p className="energy-card text-center text-xl p-8 animate-fade-in">
           <ClockIcon className="w-6 h-6 inline-block animate-spin mr-2" />
           Loading...
         </p>
       ) : myOnlyOffers.length === 0 ? (
-        <p className="text-center text-lg p-5 bg-green-700/50 rounded-lg">
+        <p className="energy-card text-center text-lg p-5 animate-fade-in">
           You have no active offers.
         </p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-10">
-          {myOnlyOffers.map((offer) => (
-            <OfferCard
+          {myOnlyOffers.map((offer, index) => (
+            <div
               key={offer.offer_id || offer._id}
-              offer={offer}
-              isOwnOffer={true}
-              handleCancelOffer={handleCancelOffer}
-              acceptNegotiation={acceptNegotiation}
-              cancelNegotiation={cancelNegotiation}
-            />
+              className="animate-fade-in-up"
+              style={{ animationDelay: `${(index + 3) * 0.1}s` }}
+            >
+              <OfferCard
+                offer={offer}
+                isOwnOffer={true}
+                handleCancelOffer={handleCancelOffer}
+                acceptNegotiation={acceptNegotiation}
+                cancelNegotiation={cancelNegotiation}
+              />
+            </div>
           ))}
         </div>
       )}
 
       {/* MARKET OFFERS */}
-      <h2 className="font-bold text-2xl mb-3 text-white/90 text-center">
+      <h2 className="font-bold text-2xl mb-3 text-white/90 text-center animate-fade-in-up delay-300">
         Market Offers Near You
       </h2>
 
       {loading ? (
-        <p className="text-center text-xl p-8 bg-green-700/50 rounded-lg">
+        <p className="energy-card text-center text-xl p-8 animate-fade-in">
           <ClockIcon className="w-6 h-6 inline-block animate-spin mr-2" />
           Loading...
         </p>
       ) : filteredMarketOffers.length === 0 ? (
-        <p className="text-center text-lg p-5 bg-green-700/50 rounded-lg">
+        <p className="energy-card text-center text-lg p-5 animate-fade-in">
           No available offers in your transformer area.
         </p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredMarketOffers.map((offer) => (
-            <OfferCard
+          {filteredMarketOffers.map((offer, index) => (
+            <div
               key={offer.offer_id || offer._id}
-              offer={offer}
-              isOwnOffer={false}
-              handleCancelOffer={handleCancelOffer}
-              acceptNegotiation={acceptNegotiation}
-              cancelNegotiation={cancelNegotiation}
-            />
+              className="animate-fade-in-up"
+              style={{ animationDelay: `${(index + 4) * 0.1}s` }}
+            >
+              <OfferCard
+                offer={offer}
+                isOwnOffer={false}
+                handleCancelOffer={handleCancelOffer}
+                acceptNegotiation={acceptNegotiation}
+                cancelNegotiation={cancelNegotiation}
+              />
+            </div>
           ))}
         </div>
       )}

@@ -1,5 +1,5 @@
 // ---------------------- Load ENV Variables ----------------------
-require("dotenv").config();
+require("dotenv").config({ path: "../.env" });
 
 // ---------------------- Core Imports ----------------------
 const express = require("express");
