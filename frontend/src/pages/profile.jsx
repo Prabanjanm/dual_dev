@@ -12,7 +12,6 @@ import {
   EyeSlashIcon,
   ArrowRightOnRectangleIcon,
 } from "@heroicons/react/24/outline";
-import NavigationBar from "../components/navbar.jsx";
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -94,7 +93,7 @@ export default function Profile() {
     setPasswordMsg("Processing...");
 
     try {
-      const res = await fetch("http://localhost:5001/api/auth/change-password", {
+      const res = await fetch("http://localhost:5001/api/users/change-password", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -378,7 +377,6 @@ export default function Profile() {
         )}
       </div>
 
-      <NavigationBar active="Profile" />
     </div>
   );
 }
