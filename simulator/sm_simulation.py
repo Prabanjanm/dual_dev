@@ -4,17 +4,17 @@ import time
 import random
 from datetime import datetime, timezone
 
-# =======================================================
+
 #        MQTT CONFIGURATION (HiveMQ Cloud)
-# =======================================================
+
 BROKER = "d2ed7624168549baa276fe4f8c9fb29e.s1.eu.hivemq.cloud"
 PORT = 8883
 USERNAME = "poovuexample"
 PASSWORD = "qY6k574ZeP_JNr@"
 
-# =======================================================
+
 #        METER SIMULATION CONFIG
-# =======================================================
+
 METER_IDS = ["MTR_SIM_001", "MTR_SIM_002", "MTR_SIM_003", "MTR_SIM_004"]
 
 # Keep cumulative readings per meter
@@ -22,9 +22,8 @@ meter_readings = {
     meter_id: {"import": 0.0, "export": 0.0} for meter_id in METER_IDS
 }
 
-# =======================================================
 #        MQTT CLIENT SETUP
-# =======================================================
+
 client = mqtt.Client(client_id="PowerLedger_Simulator")
 
 client.username_pw_set(USERNAME, PASSWORD)
@@ -36,9 +35,6 @@ print("Connecting to HiveMQ Cloud broker...")
 client.connect(BROKER, PORT, 60)
 print("Connected to HiveMQ Cloud broker successfully!\n")
 
-# =======================================================
-#        BEHAVIOR & DATA GENERATION
-# =======================================================
 def get_period():
     hour = datetime.now().hour
     if 6 <= hour < 9:
@@ -113,8 +109,7 @@ def generate_meter_data(meter_id, period):
         "status": "active"
     }
 
-# =======================================================
-#        MAIN LOOP
+
 # =======================================================
 try:
     print("Smart Meter Simulation (4 meters) started...\n")
