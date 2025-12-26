@@ -299,3 +299,6 @@ exports.history = async (req, res) => {
         res.status(500).json({ message: "Error fetching history" });
     }
 };
+// 🔹 EXPORT EXISTING WEB3 + GANACHE
+exports.getWeb3 = () => web3;
+exports.getGanacheProvider = () => ganacheProvider;

@@ -20,98 +20,70 @@ const getTokenBalance = async (wallet_address) => {
   return Number(web3.utils.fromWei(balance, "ether")); // assuming token has 18 decimals
 };
 
+const {
+  createSellerOfferOnChain,
+  buyerConfirmOnChain
+} = require("../blockchain/energyContract");
+
 // Create offer
 exports.createoffer = async (req, res) => {
-  const io = req.app.get("io");
   const session = await mongoose.startSession();
 
   try {
-    console.log("Create offer request body:", req.body);
     session.startTransaction();
+   console.log("Create offer request:", req.body);
+    const { creator_id, units, token_per_unit } = req.body;
+     
+    const creator = await User.findOne({ user_id: creator_id }).session(session);
 
-    // Destructure request body
-    const { user_id, units, token_per_unit } = req.body;
-    console.log("Creating offer for user:", user_id, "Units:", units, "Token/Unit:", token_per_unit);
-    // Validate required fields
-    if (!user_id || !units || !token_per_unit) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({ msg: "Missing fields: user, units, token_per_unit are required" });
-    }
-    const user = await User.findOne({ user_id }).session(session);
-    if (!user) {
-      console.log("User not found:", user_id);  
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(404).json({ msg: "User not found" });
-    }
-      const wallet_address = user.wallet_address;
-    // Fetch user from DB
+    if (!creator) throw new Error("Creator not found");
+
+    if (creator.energy_balance < units)
+      return res.status(400).json({ msg: "Not enough energy" });
+
+    creator.energy_balance -= units;
+    creator.reserved_energy += units;
+   console.log("Creator energy balance after reservation:", creator.energy_balance);
    
-    if (wallet_address) {
-      console.log("Fetching wallet address for creator:", user.user_id);
-      user.wallet_address = wallet_address;
-      await user.save({ session });
-    }
-
-    const unitsNum = Number(units);
-    const tokenPerUnit = Number(token_per_unit);
-    const totalTokens = unitsNum * tokenPerUnit;
-
-    // SELL OFFER: check energy balance
-    
-      if (Number(user.energy_balance) < unitsNum) {
-        await session.abortTransaction();
-        session.endSession();
-        return res.status(400).json({ msg: "Not enough energy to create sell offer" });
-      }
-
-      user.energy_balance -= unitsNum;
-      user.reserved_energy += unitsNum;
-
-    // Create offer object
-    
     const offer = new Offer({
-      offer_id: await generateOfferId(),
-      creator_id: user.user_id,
-      transformer_id: user.transformer_id,
-      units: unitsNum,
-      token_per_unit: tokenPerUnit,
-      total_tokens: totalTokens,
-      remaining_units: unitsNum,
-      created_at: new Date(),
-      status: "open"
+      offer_id: "OFF" + Date.now(),
+      creator_id: creator.user_id,
+      transformer_id: creator.transformer_id,
+      units,
+      remaining_units: units,
+      token_per_unit,
+      total_tokens: units * token_per_unit,
+      status: "open",
+      created_at: new Date()
     });
-
-    // Save to DB
-    await user.save({ session });
+   console.log("New offer created:", offer.offer_id, "Units:", units, "Price per unit:", token_per_unit); 
+    await creator.save({ session });
+    console.log("Creator saved to DB");
     await offer.save({ session });
+    console.log("Offer and creator saved to DB");
+    // 🔗 ON-CHAIN CREATE
+    const chainRes = await createSellerOfferOnChain(
+      creator.wallet_address,
+      units,
+      token_per_unit
+    );
+
+  console.log("On-chain create offer result:", chainRes);
+    if (!chainRes.success) throw new Error(chainRes.error);
+  console.log("On-chain offer created with txHash:", chainRes.txHash);
     await session.commitTransaction();
+    console.log("Transaction committed");
     session.endSession();
+    console.log("Session ended");
 
- 
-    // Notify nearby users in real-time
-   
-    const sameTransformerUsers = await User.find({
-      transformer_id: user.transformer_id
-    }).select("user_id");
+    res.json({ success: true, offer });
 
-    sameTransformerUsers.forEach(u => {
-      io.to(u.user_id.toString()).emit("offer_created", {
-        msg: "A new offer is available near your transformer",
-        offer
-      });
-    });
-
-    return res.json({ success: true, msg: "Offer created", offer });
   } catch (err) {
-    try { await session.abortTransaction(); } catch (_) {}
+    await session.abortTransaction();
     session.endSession();
-    console.error("createOffer error:", err);
-    return res.status(500).json({ msg: "Server error" });
+    res.status(500).json({ msg: err.message });
   }
 };
-
 
 exports.canceloffer = async (req, res) => {
   const io = req.app.get("io");
@@ -197,158 +169,71 @@ exports.canceloffer = async (req, res) => {
   }
 };
 
-//--accept offer function--
-exports.acceptoffer = async (req, res) => {
-  const io = req.app.get("io");
+//--accept offer function--exports.acceptoffer = async (req, res) => {
+  exports.acceptoffer = async (req, res) => {
+
   const session = await mongoose.startSession();
-  session.startTransaction();
 
   try {
-    const { offer_id ,user ,unit } = req.body;
+    session.startTransaction();
 
-    // 1. Find Offer
-   
+    const { offer_id, user_id, unit } = req.body;
+
     const offer = await Offer.findOne({ offer_id }).session(session);
+    if (!offer || offer.status !== "open")
+      return res.status(400).json({ msg: "Invalid offer" });
 
-    if (!offer) {
-      await session.abortTransaction(); session.endSession();
-      return res.status(404).json({ msg: "Offer not found" });
-    }
-    console.log("Offer found:", offer.offer_id, "Status:", offer.status);
-    if (offer.status !== "open") {
-      await session.abortTransaction(); session.endSession();
-      return res.status(400).json({ msg: "Offer already closed" });
-    }
+    const seller = await User.findOne({ user_id: offer.creator_id }).session(session);
+    const buyer = await User.findOne({ user_id }).session(session);
 
-    console.log("Offer is open for acceptance");
-  
-    // 2. Creator of Offer
-   
-    const creator = await User.findOne({ user_id: offer.creator_id }).session(session);
+    if (unit > offer.remaining_units)
+      return res.status(400).json({ msg: "Units exceed offer" });
 
-    if (!creator) {
-      await session.abortTransaction(); session.endSession();
-      return res.status(404).json({ msg: "Creator not found" });
-    }
+    // 🔗 ON-CHAIN CONFIRM
+    const chainRes = await buyerConfirmOnChain(
+      buyer.wallet_address,
+      seller.wallet_address,
+      unit
+    );
 
-   console.log("Creator found:", creator.user_id);
+    if (!chainRes.success) throw new Error(chainRes.error);
 
-    if (offer.creator_id === user_id) {
-        await session.abortTransaction(); session.endSession();
-        return res.status(400).json({ msg: "Creator cannot accept own offer" });
-    }
-      
-
-    // 3. Fetch buyer user
-
-    console.log("Buyer found:", user.user_id);
-    console.log("Buyer wallet address:", user.wallet_address);
-
-    if (!user) {
-      console.log("Counterparty not found:", user_id);
-      await session.abortTransaction(); session.endSession();
-      return res.status(404).json({ msg: "Counterparty not found" });
-    }
-
-    // 4. Process trade
-  
-    console.log("Processing trade for units:", unit);
-
-    const remaining_units = offer.remaining_units;
-
-    if(unit > remaining_units){
-        await session.abortTransaction(); session.endSession();
-        return res.status(400).json({ msg: "Requested units exceed remaining units in offer" });
-    }
-
-
-
-    const needed_token =unit*offer.token_per_unit; 
-   console.log("Tokens needed for trade:", needed_token);
-
-    
-        console.log("Processing SELL offer acceptance");
-    // Seller gives energy
-
-    if (creator.reserved_energy < unit) {
-       await session.abortTransaction(); session.endSession();
-        console.log("Seller does not have enough reserved energy:", creator.reserved_energy, "required:", offer.units);
-        return res.status(400).json({ msg: "Seller does not have enough reserved energy" });
-    }
-
-    creator.reserved_energy -= unit;
-    user.energy_balance += unit;
-
-    console.log("Energy balances updated. Seller reserved energy:", creator.reserved_energy, "Buyer energy balance:", user.energy_balance);
-     
-    const balance_buyer = await get_balance(user.wallet_address);
-    console.log("Buyer token balance:", balance_buyer, "Needed tokens for trade:", needed_token);
-    if (balance_buyer < needed_token) {
-       await session.abortTransaction(); session.endSession();
-        console.log("Buyer does not have enough token balance:", balance_buyer, "required:", needed_token);
-        return res.status(400).json({ msg: "Buyer does not have enough token balance" });
-    }
-    console.log("Buyer has sufficient token balance:", balance_buyer);
-
-     const tx = await send_transaction({
-     from: user.wallet_address,
-     to: creator.wallet_address,
-     amount: needed_token,
-     unit:unit
-    });  
-
-   console.log("check");
-
-   if(tx.message !== "Transaction successful"){
-     await session.abortTransaction(); session.endSession();
-      console.log("Token transfer failed:", tx.error);
-     return res.status(500).json({ msg: "Token transfer failed", error: tx.error });
-  }
-  
+    // 🔁 DB MIRROR
+    seller.reserved_energy -= unit;
+    buyer.energy_balance += unit;
     offer.remaining_units -= unit;
 
-    offer.buyers.push({
-      buyer_id: buyer.user_id,
-      buying_units: unit,
-      created_at: new Date()
-    });
-
-    console.log("Trade processed: Units traded:", unit, "Tokens transferred:", needed_token);
-
-    if(offer.remaining_units === 0){
+    if (offer.remaining_units === 0) {
       offer.status = "completed";
       offer.completed_at = new Date();
     }
 
-    // 7. Save and Commit
-
-    await creator.save({ session });
-    //await counter.save({ session });
+    await seller.save({ session });
+    await buyer.save({ session });
     await offer.save({ session });
-   console.log("newn");
+
     await session.commitTransaction();
     session.endSession();
 
-    
-//  Real-time notification for both parties
- const users = await User.find({ transformerid: offer.transformerid }).select("user_id");
-    users.forEach(u => {
-      io.to(u.user_id.toString()).emit("offer_completed", {
-        msg: "Trade completed",
-        offer
-      });
-    });
-    return res.status(200).json({
-      success: true,
-      msg: "Offer accepted successfully",
-      traded_tokens: needed_token,
-      offer
-    });
+    res.json({ success: true, offer });
 
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
-    console.error("Accept Offer Error:", err);
-    return res.status(500).json({ msg: "Server error", error: err.message });
+    res.status(500).json({ msg: err.message });
   }
 };
+
+ // adjust the path
+
+exports.getAllOffers = async(req, res) => {
+  try {
+    const offers = await Offer.find();  // fetch all documents
+    console.log('All Offers:', offers);
+    return res.json(offers);
+  } catch (err) {
+    console.error('Error fetching offers:', err);
+    throw err;
+  }
+};
+
