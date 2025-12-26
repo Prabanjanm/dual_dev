@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const offerController = require("../controllers/offercontroller");
-const auth = require("../middleware/auth");  // correct path
+const authMiddleware = require("../middleware/auth");
 
 // ---------------------- Offer Routes ----------------------
 router.post("/create", offerController.createoffer);
