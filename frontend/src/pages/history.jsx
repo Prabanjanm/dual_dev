@@ -10,7 +10,7 @@ export default function History() {
     try {
       const token = localStorage.getItem("token");
       console.log("[HISTORY] Fetching closed offers...");
-      const res = await fetch("http://localhost:5001/api/offers/closed/30days", {
+      const res = await fetch("http://localhost:5001/api/offers/complete", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -25,7 +25,7 @@ export default function History() {
 
       const data = await res.json();
       console.log("[HISTORY] Response:", data);
-      setOffers(data.offers || data.data || []);
+      setOffers(Array.isArray(data) ? data : []);
       setServerError(false);
     } catch (err) {
       console.error("[HISTORY] Fetch error:", err);

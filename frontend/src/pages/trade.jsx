@@ -45,18 +45,18 @@ export default function TradePage() {
       console.log("[TRADE] Fetching offers from backend...");
 
       // My offers
-      const own = await axios.get(`${API}/api/offers/current/own`, {
+      const own = await axios.get(`${API}/api/offers/own`, {
         headers: authHeader(),
       });
       console.log("[TRADE] Own offers response:", own.data);
-      setMyOffers(own.data.offers || []);
+      setMyOffers(Array.isArray(own.data) ? own.data : []);
 
       // Market offers
-      const all = await axios.get(`${API}/api/offers/current`, {
+      const all = await axios.get(`${API}/api/offers/other`, {
         headers: authHeader(),
       });
       console.log("[TRADE] Market offers response:", all.data);
-      setMarketOffers(all.data.offers || []);
+      setMarketOffers(Array.isArray(all.data) ? all.data : []);
 
       setError("");
     } catch (err) {
