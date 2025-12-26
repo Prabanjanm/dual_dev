@@ -237,3 +237,31 @@ exports.getAllOffers = async(req, res) => {
   }
 };
 
+exports.getown = async(req, res) => {
+  try {
+   
+    const user_id = req.user_id;  
+    const offers = await Offer.find({ creator_id: user_id,
+      status: { $in: ["open"] }
+     });
+    console.log('All Offers:', offers);
+    return res.json(offers);
+  } catch (err) {
+    console.error('Error fetching offers:', err);
+    throw err;
+  }
+};
+exports.getother = async(req, res) => {
+  try {
+    const user_id = req.user_id;  
+   const offers = await Offer.find({ creator_id: { $ne: user_id },
+      status: { $in: ["open"] }
+     });  // fetch all documents
+    console.log('All Offers:', offers);
+    return res.json(offers);
+  } catch (err) {
+    console.error('Error fetching offers:', err);
+    throw err;
+  }
+};
+
